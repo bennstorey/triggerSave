@@ -1,37 +1,41 @@
 /**
- * triggerSave v1.1.0
- * Force trigger Studio save when 'isFeaturedImage' toggle is changed
+ * Trigger save when isFeaturedImage checkbox is toggled.
+ * v2.0 - Fix for Studio Digital Editor, DigitalArticle only
  */
-(function () {
-  console.log("[triggerSave] Plugin loaded v1.1.0");
+(function triggerSavePlugin() {
+  if (!window.csde) {
+    console.warn('[triggerSave] CSDE not available');
+    return;
+  }
 
-  // Wait until CSDE is available
-  const interval = setInterval(() => {
-    if (!window.CSDE || !window.CSDE.componentApi) return;
+  window.csde.registerPlugin('triggerSave', {
+    onLoad(context) {
+      console.info('[triggerSave] Plugin loaded v2.0');
 
-    clearInterval(interval);
-    const { componentApi } = window.CSDE;
+      // Watch when properties are changed
+      context.eventBus.on('propertyChange', ({ component, property, value }) => {
+        if (property === 'isFeaturedImage') {
+          console.info('[triggerSave] isFeaturedImage changed:', value);
 
-    // Hook into all components when loaded
-    componentApi.onComponentMount((componentCtx) => {
-      const { component, updateProperty } = componentCtx;
+          try {
+            const editor = context.editor;
+            const doc = editor?.document;
 
-      // Only apply to image components
-      if (component.name !== "image") return;
-
-      // Listen to property changes
-      componentCtx.onPropertyChange("isFeaturedImage", (newValue) => {
-        console.log("[triggerSave] isFeaturedImage changed to:", newValue);
-
-        // Mark the document dirty to force Studio Editor to trigger Save
-        const editor = window.CSDE?.editor;
-        if (editor && typeof editor.markDirty === "function") {
-          editor.markDirty();
-          console.log("[triggerSave] editor marked dirty");
-        } else {
-          console.warn("[triggerSave] editor.markDirty not available");
+            if (doc?.markDirty && doc?.save) {
+              doc.markDirty();
+              doc.save().then(() => {
+                console.info('[triggerSave] Save triggered after isFeaturedImage change');
+              }).catch((err) => {
+                console.error('[triggerSave] Save failed:', err);
+              });
+            } else {
+              console.warn('[triggerSave] Document or save function not available');
+            }
+          } catch (e) {
+            console.error('[triggerSave] Error during save trigger:', e);
+          }
         }
       });
-    });
-  }, 500);
+    }
+  });
 })();
