@@ -1,41 +1,34 @@
-/**
- * Trigger save when isFeaturedImage checkbox is toggled.
- * v2.0 - Fix for Studio Digital Editor, DigitalArticle only
- */
-(function triggerSavePlugin() {
-  if (!window.csde) {
-    console.warn('[triggerSave] CSDE not available');
-    return;
-  }
+// Studio Digital Editor Plugin: Trigger Save on isFeaturedImage toggle
+// Version: 1.0
+(function () {
+    ContentStationSdk.showNotification({
+        content: 'triggerSave.js plugin loaded (v1.0)',
+    });
 
-  window.csde.registerPlugin('triggerSave', {
-    onLoad(context) {
-      console.info('[triggerSave] Plugin loaded v2.0');
+    DigitalEditorSdk.onOpenArticle(function (article) {
+        const observer = new MutationObserver(() => {
+            article.save(); // manually trigger save when checkbox changes
+            ContentStationSdk.showNotification({
+                content: 'Triggered save from isFeaturedImage toggle',
+            });
+        });
 
-      // Watch when properties are changed
-      context.eventBus.on('propertyChange', ({ component, property, value }) => {
-        if (property === 'isFeaturedImage') {
-          console.info('[triggerSave] isFeaturedImage changed:', value);
-
-          try {
-            const editor = context.editor;
-            const doc = editor?.document;
-
-            if (doc?.markDirty && doc?.save) {
-              doc.markDirty();
-              doc.save().then(() => {
-                console.info('[triggerSave] Save triggered after isFeaturedImage change');
-              }).catch((err) => {
-                console.error('[triggerSave] Save failed:', err);
-              });
+        const checkForToggle = () => {
+            const checkbox = document.querySelector('[name="isFeaturedImage"] input[type="checkbox"]');
+            if (checkbox) {
+                observer.observe(checkbox, {
+                    attributes: true,
+                    attributeFilter: ['aria-checked', 'checked'],
+                });
+                ContentStationSdk.showNotification({
+                    content: 'isFeaturedImage checkbox observer attached',
+                });
             } else {
-              console.warn('[triggerSave] Document or save function not available');
+                // Retry until it appears
+                setTimeout(checkForToggle, 500);
             }
-          } catch (e) {
-            console.error('[triggerSave] Error during save trigger:', e);
-          }
-        }
-      });
-    }
-  });
+        };
+
+        checkForToggle();
+    });
 })();
