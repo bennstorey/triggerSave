@@ -1,32 +1,37 @@
-// triggerSave.js - version 1.0.0
-
+/**
+ * triggerSave v1.1.0
+ * Force trigger Studio save when 'isFeaturedImage' toggle is changed
+ */
 (function () {
-  console.log('[triggerSave.js] Plugin loaded');
+  console.log("[triggerSave] Plugin loaded v1.1.0");
 
-  // Wait for the editor to be fully initialized
+  // Wait until CSDE is available
   const interval = setInterval(() => {
-    const checkbox = document.querySelector('[name="isFeaturedImage"] input[type="checkbox"]');
-    if (checkbox) {
-      clearInterval(interval);
-      console.log('[triggerSave.js] Found isFeaturedImage checkbox');
+    if (!window.CSDE || !window.CSDE.componentApi) return;
 
-      checkbox.addEventListener('change', () => {
-        console.log('[triggerSave.js] isFeaturedImage toggled, attempting to trigger save');
-        const event = new Event('input', { bubbles: true });
-        checkbox.dispatchEvent(event);
+    clearInterval(interval);
+    const { componentApi } = window.CSDE;
 
-        // Look for a global save routine
-        if (window.__store__?.dispatch) {
-          try {
-            window.__store__.dispatch({ type: 'DOCUMENT_MARK_AS_DIRTY' });
-            console.log('[triggerSave.js] Dispatch: DOCUMENT_MARK_AS_DIRTY');
-          } catch (e) {
-            console.warn('[triggerSave.js] Dispatch failed:', e);
-          }
+    // Hook into all components when loaded
+    componentApi.onComponentMount((componentCtx) => {
+      const { component, updateProperty } = componentCtx;
+
+      // Only apply to image components
+      if (component.name !== "image") return;
+
+      // Listen to property changes
+      componentCtx.onPropertyChange("isFeaturedImage", (newValue) => {
+        console.log("[triggerSave] isFeaturedImage changed to:", newValue);
+
+        // Mark the document dirty to force Studio Editor to trigger Save
+        const editor = window.CSDE?.editor;
+        if (editor && typeof editor.markDirty === "function") {
+          editor.markDirty();
+          console.log("[triggerSave] editor marked dirty");
         } else {
-          console.warn('[triggerSave.js] Store dispatch not available');
+          console.warn("[triggerSave] editor.markDirty not available");
         }
       });
-    }
-  }, 1000);
+    });
+  }, 500);
 })();
