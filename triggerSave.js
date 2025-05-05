@@ -2,6 +2,7 @@
 // Assumes the property is defined in components-definition.json with dataType: 'data'
 
 (function () {
+  console.log("[triggerSave] Plugin loaded");
   window.ContentStation && ContentStation.require && ContentStation.require(["app", "repository", "pubsub"], function (app, repo, pubsub) {
     // Wait for editor to load a component
     pubsub.subscribe("component-editor:component-loaded", function (data) {
