@@ -1,28 +1,32 @@
-// Studio Digital Editor Plugin to persist 'isFeaturedImage' toggle
-// Assumes the property is defined in components-definition.json with dataType: 'data'
+// triggerSave.js - version 1.0.0
 
 (function () {
-  console.log("[triggerSave] Plugin loaded");
-  window.ContentStation && ContentStation.require && ContentStation.require(["app", "repository", "pubsub"], function (app, repo, pubsub) {
-    // Wait for editor to load a component
-    pubsub.subscribe("component-editor:component-loaded", function (data) {
-      const { component, componentEditor } = data;
-      if (!component || !componentEditor) return;
+  console.log('[triggerSave.js] Plugin loaded');
 
-      // Check if component has our custom field
-      const fieldEl = componentEditor.el.querySelector('[data-property-name="isFeaturedImage"] input[type="checkbox"]');
-      if (!fieldEl) return;
+  // Wait for the editor to be fully initialized
+  const interval = setInterval(() => {
+    const checkbox = document.querySelector('[name="isFeaturedImage"] input[type="checkbox"]');
+    if (checkbox) {
+      clearInterval(interval);
+      console.log('[triggerSave.js] Found isFeaturedImage checkbox');
 
-      // Set initial state from model
-      fieldEl.checked = !!component.model.get("isFeaturedImage");
+      checkbox.addEventListener('change', () => {
+        console.log('[triggerSave.js] isFeaturedImage toggled, attempting to trigger save');
+        const event = new Event('input', { bubbles: true });
+        checkbox.dispatchEvent(event);
 
-      // Attach change listener
-      fieldEl.addEventListener("change", function () {
-        const value = fieldEl.checked;
-        component.model.set("isFeaturedImage", value);
-        component.model.trigger("change"); // Trigger model change
-        componentEditor.markDirty(); // Mark editor as dirty so Save is enabled
+        // Look for a global save routine
+        if (window.__store__?.dispatch) {
+          try {
+            window.__store__.dispatch({ type: 'DOCUMENT_MARK_AS_DIRTY' });
+            console.log('[triggerSave.js] Dispatch: DOCUMENT_MARK_AS_DIRTY');
+          } catch (e) {
+            console.warn('[triggerSave.js] Dispatch failed:', e);
+          }
+        } else {
+          console.warn('[triggerSave.js] Store dispatch not available');
+        }
       });
-    });
-  });
+    }
+  }, 1000);
 })();
